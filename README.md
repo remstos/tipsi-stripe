@@ -5,6 +5,8 @@
 
 React Native Stripe binding for iOS/Android platforms
 
+Updated package from tipsi/tipsi-stripe with new version of gradle
+
 ## Strong Customer Authentication (SCA) support
 ### PaymentIntents & SetupIntents
 
