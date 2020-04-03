@@ -115,6 +115,7 @@ RCT_ENUM_CONVERTER(STPPaymentMethodType,
                       @"card": @(STPPaymentMethodTypeCard),
                       @"iDEAL": @(STPPaymentMethodTypeiDEAL),
                       @"card_present": @(STPPaymentMethodTypeCardPresent),
+                      @"fpx": @(STPPaymentMethodTypeUnknown),
                       @"unknown": @(STPPaymentMethodTypeUnknown),
                       }),
                    STPPaymentMethodTypeUnknown,
@@ -125,7 +126,9 @@ RCT_ENUM_CONVERTER(STPPaymentMethodType,
         case STPPaymentMethodTypeCard: return @"card";
         case STPPaymentMethodTypeiDEAL: return @"iDEAL";
         case STPPaymentMethodTypeCardPresent: return @"card_present";
-        case STPPaymentMethodTypeUnknown: return @"unknown";
+        case STPPaymentMethodTypeFPX: // unsupported at this time (fall through)
+        case STPPaymentMethodTypeUnknown:
+        default: return @"unknown";
     }
 }
 
@@ -160,6 +163,7 @@ RCT_ENUM_CONVERTER(STPPaymentIntentStatus,
             TPSEntry(requires_payment_method, RequiresPaymentMethod)
             TPSEntry(requires_confirmation, RequiresConfirmation)
             TPSEntry(succeeded, Succeeded)
+            default: return TPSStripeParam(PaymentIntentStatus, unknown);
     }
 #undef TPSEntry
 }
@@ -189,6 +193,7 @@ RCT_ENUM_CONVERTER(STPSetupIntentStatus,
             TPSEntry(requires_payment_method, RequiresPaymentMethod)
             TPSEntry(requires_confirmation, RequiresConfirmation)
             TPSEntry(succeeded, Succeeded)
+            default: return TPSStripeParam(SetupIntentStatus, unknown);
     }
 #undef TPSEntry
 }
@@ -254,6 +259,7 @@ void initializeTPSPaymentNetworksWithConditionalMappings() {
     NSString *publishableKey;
     NSString *merchantId;
     NSDictionary *errorCodes;
+    NSString *stripeAccount;
 
     RCTPromiseResolveBlock promiseResolver;
     RCTPromiseRejectBlock promiseRejector;
@@ -297,6 +303,10 @@ RCT_EXPORT_METHOD(init:(NSDictionary *)options errorCodes:(NSDictionary *)errors
     merchantId = options[@"merchantId"];
     errorCodes = errors;
     [Stripe setDefaultPublishableKey:publishableKey];
+}
+
+RCT_EXPORT_METHOD(setStripeAccount:(NSString *)_stripeAccount) {
+    stripeAccount = _stripeAccount;
 }
 
 RCT_EXPORT_METHOD(deviceSupportsApplePay:(RCTPromiseResolveBlock)resolve
@@ -962,7 +972,7 @@ RCT_EXPORT_METHOD(openApplePaySetup) {
     if (!cardParamsInput && NSNull.null != (id)cardParamsInput) {return nil;}
 
     STPPaymentMethodCardParams * card = [self extractPaymentMethodCardParamsFromDictionary:cardParamsInput];
-    STPPaymentMethodBillingDetails * details = [self extractPaymentMethodBillingDetailsFromDictionary: params[TPSStripeParam(createPaymentMethod, card)]];
+    STPPaymentMethodBillingDetails * details = [self extractPaymentMethodBillingDetailsFromDictionary: params[TPSStripeParam(createPaymentMethod, billingDetails)]];
     NSDictionary* metadata = params[TPSStripeParam(createPaymentMethod, metadata)];
 
     // TODO: decide if we want to support iDEAL bank accounts
@@ -1287,6 +1297,7 @@ RCT_EXPORT_METHOD(openApplePaySetup) {
 
     STPAPIClient * client = [[STPAPIClient alloc] initWithPublishableKey:[Stripe defaultPublishableKey]];
     client.appInfo = info;
+    client.stripeAccount = stripeAccount;
 
     // Singleton sharedHandler should have the matching API Client!
     STPPaymentHandler.sharedHandler.apiClient = client;

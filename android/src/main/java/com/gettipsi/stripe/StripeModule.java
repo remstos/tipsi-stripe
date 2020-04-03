@@ -187,6 +187,16 @@ public class StripeModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
+  public void setStripeAccount(final String stripeAccount) {
+    ArgCheck.notEmptyString(mPublicKey);
+    if (stripeAccount == null) {
+      mStripe = new Stripe(getReactApplicationContext(), mPublicKey);
+    } else {
+      mStripe = new Stripe(getReactApplicationContext(), mPublicKey, stripeAccount);
+    }
+  }
+
+  @ReactMethod
   public void createTokenWithCard(final ReadableMap cardData, final Promise promise) {
     try {
       ArgCheck.nonNull(mStripe);
@@ -271,12 +281,12 @@ public class StripeModule extends ReactContextBaseJavaModule {
             StripeIntent.Status resultingStatus = result.getIntent().getStatus();
 
             if (Succeeded.equals(resultingStatus) ||
-                RequiresCapture.equals(resultingStatus)) {
+                RequiresCapture.equals(resultingStatus) ||
+                RequiresConfirmation.equals(resultingStatus)) {
               promise.resolve(convertPaymentIntentResultToWritableMap(result));
             } else {
               if (Canceled.equals(resultingStatus) ||
-                  RequiresAction.equals(resultingStatus) ||
-                  RequiresConfirmation.equals(resultingStatus)
+                  RequiresAction.equals(resultingStatus)
               ) {
                 promise.reject(CANCELLED, CANCELLED);      // TODO - normalize the message
               } else {
